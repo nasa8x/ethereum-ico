@@ -20,19 +20,16 @@ module.exports = function (deployer, network, accounts) {
 
   console.log('deploying...');
 
+  //return ;// if run test 
+
   // var startTime = moment().add(1,'m').toDate().getTime();
   // var endTime = moment().add(1,'M').toDate().getTime();
-  const rate = 1000; // 1eth = 1000 token 
-  const whiteListBonus = 40; //rate + (rate * 0.4); // bonus 40%
-  const from = 25; // start bonus 25%
-  const to = 5; // end bonus 5%
-  const goal = 1000000000000000000; // 10 eth 
-  const cap = 2000000000000000000; // 20 eth 
-
-  const address = '0x00a8d3eb87ca1bd6719c543fd389e6411394103b';
+  const rate = 1000; // 1eth = 1000 token
+  //const address = '0x627306090abaB3A6e1400e9345bC60c78a8BEf57';//'0x00a8d3eb87ca1bd6719c543fd389e6411394103b';
+  const address = '0x00a8d3eb87ca1bd6719c543fd389e6411394103b';  
 
   const startTime = latestTime() + duration.minutes(1);
-  const endTime = startTime + duration.hours(3);
+  const endTime = startTime + duration.hours(6);
 
 
   // const startTime = web3.eth.getBlock(web3.eth.blockNumber).timestamp + 1; // one second in the future
@@ -40,15 +37,27 @@ module.exports = function (deployer, network, accounts) {
   // const rate = new web3.BigNumber(1000);
   // const wallet = accounts[0];
 
-  return deployer.deploy(KaioTokenCrowdsale, startTime, endTime, rate, whiteListBonus, from, to, goal, cap, address).then(async () => {
+  return deployer.deploy(KaioTokenCrowdsale, startTime, endTime, rate, address).then(async () => {
     const instance = await KaioTokenCrowdsale.deployed();
     const token = await instance.token.call();
 
-    console.log("params: ", JSON.stringify([startTime, endTime, rate, whiteListBonus,from, to, goal, cap, address]));
+    console.log("params: ", JSON.stringify([startTime, endTime, rate, address]));
     console.log("start at: ", moment.unix(startTime).format('YYYY-MM-DD hh:mm:ss A'));
     console.log("end at: ", moment.unix(endTime).format('YYYY-MM-DD hh:mm:ss A'));
     console.log('token:', token);
   });
+
+
+  // return deployer.deploy(KaioTokenCrowdsale, startTime, endTime, rate, goal, cap, address).then(async () => {
+  //   const instance = await KaioTokenCrowdsale.deployed();
+  //   const token = await instance.token.call();
+
+  //   console.log("params: ", JSON.stringify([startTime, endTime, rate, goal, cap, address]));
+  //   console.log("start at: ", moment.unix(startTime).format('YYYY-MM-DD hh:mm:ss A'));
+  //   console.log("end at: ", moment.unix(endTime).format('YYYY-MM-DD hh:mm:ss A'));
+  //   console.log('token:', token);
+  // });
+
 
 
 };

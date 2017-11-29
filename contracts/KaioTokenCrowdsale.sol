@@ -1,37 +1,47 @@
 pragma solidity ^0.4.18;
 
-import "./zeppelin/contracts/crowdsale/CappedCrowdsale.sol";
 import "./zeppelin/contracts/crowdsale/RefundableCrowdsale.sol";
+import "./zeppelin/contracts/crowdsale/CappedCrowdsale.sol";
 import "./KaioToken.sol";
 
 contract KaioTokenCrowdsale is CappedCrowdsale, RefundableCrowdsale {
     
-    uint256 public constant BOUNTY_SHARE = 10;
-    uint256 public constant CROWDSALE_SHARE = 40;
-    uint256 public constant FOUNDATION_SHARE = 50;
+    
+    // total token supply: 1B
+    uint256 public constant TOTAL_SUPPLY = 10000 * (10 ** 18); // 1b    
+    uint256 public constant CROWDSALE_SUPPLY = 4000 * (10 ** 18); // 400m
+    uint256 public constant PRESALE_SUPPLY = 1000 * (10 ** 18); // 100m
 
-    // price at which whitelisted buyers will be able to buy tokens
-    uint256 public whiteListBonus;
-    uint256 public fromBonus;
-    uint256 public toBonus;
+    // bonus for whitelist from 40% to 30%
+    uint256 public constant PRESALE_BONUS_MAX = 40;
+    uint256 public constant PRESALE_BONUS_MIN = 30;
+    uint256 public constant PRESALE_DAYS = 30 minutes; // 7 days 
 
-      // list of addresses that can purchase before crowdsale opens
-    mapping (address => bool) public whitelist;
-      // customize the rate for each whitelisted buyer
-    mapping (address => uint256) public buyerRate;
+    // bonus for public crowdsale from 20% to 5%
+    uint256 public constant PUBLIC_CROWDSALE_BONUS_MAX = 20; 
+    uint256 public constant PUBLIC_CROWDSALE_BONUS_MIN = 5;
+    
+    uint256 public constant PUBLIC_INVEST_MIN = 1 ether / 2;
+    uint256 public constant PUBLIC_INVEST_MAX = 300 ether;
+
+    uint256 public constant PRESALE_INVEST_MIN = 1 ether; // 50 ether
+    uint256 public constant PRESALE_INVEST_MAX = 3000 ether; 
+
+    uint256 public constant GOAL = 1 ether;
+    uint256 public constant CAP = 2 ether;
+       
+    uint256 public presaleTime;
+    uint256 public tokenRaised;
+
+     // list of addresses that can purchase before crowdsale opens
+    mapping (address => bool) public whitelist;    
    
-    function KaioTokenCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, uint256 _whiteListBonus, uint256 _fromBonus, uint256 _toBonus, uint256 _goal, uint256 _cap, address _wallet) public
-        CappedCrowdsale(_cap)     
-        RefundableCrowdsale(_goal)
+    function KaioTokenCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet)   
+        CappedCrowdsale(CAP)        
+        RefundableCrowdsale(GOAL)     
         Crowdsale(_startTime, _endTime, _rate, _wallet)
     {
-        //As goal needs to be met for a successful crowdsale
-        //the value needs to less or equal than a cap which is limit for accepted funds
-       require(_goal <= _cap);
-
-       whiteListBonus = _whiteListBonus;
-       fromBonus = _fromBonus;
-       toBonus = _toBonus;
+        presaleTime = _startTime.add(PRESALE_DAYS);    
 
     }
 
@@ -44,54 +54,86 @@ contract KaioTokenCrowdsale is CappedCrowdsale, RefundableCrowdsale {
         whitelist[buyer] = true; 
     }
 
+     function addToWhitelists(address[] buyers) public onlyOwner {
+        require(buyers.length > 0);
+        for(uint256 i = 0; i < buyers.length; i++) {
+            address b = buyers[i];
+            whitelist[b] = true;            
+        }
+    }
+
     // @return true if buyer is whitelisted
     function isWhitelisted(address buyer) public constant returns (bool) {
         return whitelist[buyer];
     }
 
-    // function rateNow() public constant returns (uint256) {
-    //     return getRate();
-    // }
 
-    function getRate() private returns(uint256) {
-        // some early buyers are offered a discount on the crowdsale price
-        if (buyerRate[msg.sender] != 0) {
-            return buyerRate[msg.sender];
-        }
+    // In case you want to divide the programs into phases
+    function restart(uint256 _startTime, uint256 _endTime, uint256 _rate) public onlyOwner {
+       startTime = _startTime;
+       endTime = _endTime;
+       rate = _rate;       
+    }
 
+    // Pay for affiliate marketing programs
+    function reward(address a, uint256 amount) public onlyOwner {
+        token.mint(a, amount);
+    }      
+
+    // calculate token amount to be created
+    function calc(uint256 val) public constant returns(uint256) {
+        
+         // otherwise compute the price for the auction block.timestamp        
+        uint256 t; uint256 f; uint256 r; uint256 elapsed;      
+       
         // whitelisted buyers can purchase at preferential price before crowdsale ends
-        if (isWhitelisted(msg.sender)) {
-            return rate + (rate * whiteListBonus/100);
+        if (now >= startTime && now <= presaleTime && tokenRaised < PRESALE_SUPPLY && isWhitelisted(msg.sender) && val >= PRESALE_INVEST_MIN && val <= PRESALE_INVEST_MAX) {
+            elapsed = now - startTime;
+            t = presaleTime - startTime;
+            f = rate.add(rate.mul(PRESALE_BONUS_MAX).div(100)); //rate + (rate * PRESALE_BONUS_MAX/100);
+            r = f.sub(rate.add(rate.mul(PRESALE_BONUS_MIN).div(100))); //f - (rate + (rate * PRESALE_BONUS_MIN/100));   
+            return val.mul(f.sub(r.mul(elapsed).div(t)));                    
+        }else if (now > presaleTime && now <= endTime && tokenRaised < CROWDSALE_SUPPLY && val >= PUBLIC_INVEST_MIN && val <= PUBLIC_INVEST_MAX) {
+            elapsed = now - presaleTime;
+            t = endTime - presaleTime;       
+            f = rate.add(rate.mul(PUBLIC_CROWDSALE_BONUS_MAX).div(100)); 
+            r = f.sub(rate.add(rate.mul(PUBLIC_CROWDSALE_BONUS_MIN).div(100))); 
+            return val.mul(f.sub(r.mul(elapsed).div(t)));
         }
-
-        // otherwise compute the price for the auction
-        uint256 elapsed = block.timestamp - startTime;        
-        uint256 t = endTime - startTime;
-        uint256 f = rate + (rate * fromBonus/100);
-        uint256 r = f - (rate + (rate * toBonus/100));
-
-        return f.sub(r.mul(elapsed).div(t));
+       
+        return 0;       
         
     }
 
     // low level token purchase function
-    function buyTokens(address beneficiary) payable {
-        require(beneficiary != 0x0);
-        require(validPurchase());
+    function buyTokens(address add) payable {
+        require(add != 0x0);
+        require(validPurchase());        
 
-        uint256 weiAmount = msg.value;
-      
-        uint256 rate = getRate();
+        uint256 val = msg.value;
         // calculate token amount to be created
-        uint256 tokens = weiAmount.mul(rate);
+        uint256 tokens = calc(val);
+
+        require(tokens > 0);
 
         // update state
-        weiRaised.add(weiAmount);
-
-        token.mint(beneficiary, tokens);
-        TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
+        weiRaised.add(val);
+        tokenRaised.add(tokens);
+        
+        token.mint(add, tokens);
+        TokenPurchase(msg.sender, add, val, tokens);
 
         forwardFunds();
     }
+
+     function finalization() internal {
+        uint256 t = token.totalSupply();
+        uint256 extant = TOTAL_SUPPLY.sub(t);
+
+        // emit tokens for the foundation
+        token.mint(wallet, extant);       
+    }
+
+    
     
 }
