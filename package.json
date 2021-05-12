@@ -36,7 +36,7 @@
     "mongoose": "^4.13.4",
     "mongoose-paginate": "^5.0.3",
     "mustache": "^2.3.0",
-    "nodemailer": "^4.4.0",
+    "nodemailer": "^6.4.16",
     "nodemailer-sparkpost-transport": "^2.0.0",
     "nprogress": "^0.2.0",
     "popper.js": "^1.13.0",
