@@ -29,7 +29,7 @@
     "inert": "^4.2.1",
     "jquery": "^3.2.1",
     "jquery.countdown": "^1.2.8",
-    "markdown-it": "^8.4.0",
+    "markdown-it": "^12.3.2",
     "mix-hash": "^1.0.1",
     "mix-utils": "^1.0.17",
     "moment": "^2.19.2",
