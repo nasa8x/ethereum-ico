@@ -32,7 +32,7 @@
     "markdown-it": "^8.4.0",
     "mix-hash": "^1.0.1",
     "mix-utils": "^1.0.17",
-    "moment": "^2.19.2",
+    "moment": "^2.29.2",
     "mongoose": "^4.13.4",
     "mongoose-paginate": "^5.0.3",
     "mustache": "^2.3.0",
