@@ -33,7 +33,7 @@
     "mix-hash": "^1.0.1",
     "mix-utils": "^1.0.17",
     "moment": "^2.19.2",
-    "mongoose": "^4.13.4",
+    "mongoose": "^4.13.21",
     "mongoose-paginate": "^5.0.3",
     "mustache": "^2.3.0",
     "nodemailer": "^4.4.0",
